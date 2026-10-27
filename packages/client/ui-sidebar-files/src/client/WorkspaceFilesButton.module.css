@@ -1,0 +1,34 @@
+/* One control in the session header's utilities row, sized to the row's other
+   icon buttons and quiet until hovered or focused. */
+.control {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  cursor: pointer;
+}
+
+.control svg {
+  width: 17px;
+  height: 17px;
+}
+
+.control:focus-visible {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+@media (hover: hover) {
+  .control:hover {
+    color: var(--dsw-alias-label-primary);
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}

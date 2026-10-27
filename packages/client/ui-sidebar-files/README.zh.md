@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-浏览 Session 的工作区目录树，并在 Sidebar 预览中打开文件。根目录与已展开目录通过直接子项监听自动刷新，手动重新读取仍可用。该 tab 从引导页进入，不认领资源地址。
+浏览 Session 的工作区目录树，并在 Sidebar 预览中打开文件。根目录与已展开目录通过直接子项监听自动刷新，手动重新读取仍可用。该 tab 可从聊天区头部按钮、引导页与 `workspace.files` 命令进入，不认领资源地址。行右键菜单可以打开条目、在终端中运行脚本或打开目录、复制路径，并在 Host 桌面支持时把路径交给本地应用。
 
 ## 目录
 
@@ -29,8 +29,9 @@ kind: "package-reference"
 - **类型**：`ctx.sidebarRightTabs.register(...)`，kind 为 `files`，id 为 `@deepseek-ai/dsh-client-ui-sidebar-files`，档位 `builtin`，没有 patterns，另有一个打开该类型的引导页入口（order 10，标题与描述取自 `sidebarFiles` 命名空间，图标为黄色文件夹）。
 - **正文**：以该 id 为键的 `sidebar.right.pane.tab` slot：strip 下的一行标题行，然后是树。共享的 [`PathLabel`](../ui-primitives/README.zh.md#component-catalog) 显示根路径，目录使用弱化颜色，最后一段使用主色。路径过长时保留尾部字符并在左侧渐隐；悬停显示完整路径。重新读取控件和 Session 作用域的 `sidebar.right.tab.files.actions` 列表位于右端，并通过 `absolutePath` 传入当前显示的根目录；[`ui-open-in-app`](../ui-open-in-app/README.zh.md) 在此提供工作区目录打开按钮。
 - **标签页标题**：以该 id 为键的 `sidebar.right.pane.tab.title` slot：类型标签前的一枚 16px 共享 `FileTypeIcon` 文件夹图标。树本身的行不画这枚图标。
+- **聊天区头部按钮**：`conversation.session.header.utilities` 中的一个图标按钮（id `workspace-files`，order 3），在当前屏幕上会话的侧栏打开或显示同一个页面；无论从哪条路径进入，页面仍只有一个 tab。
 
-`src/client/` 下的源文件：`definition.tsx`（类型是什么）、`store.ts`（它保存什么）、`face.ts`（Remote 读取与监听）、`directory-node.ts`（打开的目录及其生命周期）、`FilesBody.tsx`（它画什么，含排序与失败行两个辅助函数）、`FilesTitle.tsx`（标签页标题）、`locales.ts`（它说什么）、`index.ts`（接线）。
+`src/client/` 下的源文件：`definition.tsx`（类型是什么）、`store.ts`（它保存什么）、`face.ts`（Remote 读取与监听）、`directory-node.ts`（打开的目录及其生命周期）、`FilesBody.tsx`（它画什么，含排序与失败行两个辅助函数）、`FileTreeMenu.tsx`（单行的右键菜单）、`context-menu.ts`（脚本判定与终端动作输入的命令行）、`terminal-run.ts`（终端交接）、`WorkspaceFilesButton.tsx`（聊天区头部按钮）、`FilesTitle.tsx`（标签页标题）、`locales.ts`（它说什么）、`index.ts`（接线）。
 
 <a id="the-tree"></a>
 ## 树
@@ -42,6 +43,8 @@ kind: "package-reference"
 | `directory` | 切换展开与折叠；再次打开时重新列举，并恢复仍存在的已展开后代。折叠期间保留已显示条目的缓存。 |
 | `file` | 经 `useTabInfo().tab.actions.openResource` 打开 `dsh-resource://file/session/<sessionId>/<encoded path relative to the root>`，地址由 `@deepseek-ai/dsh-util-workspace-path` 的 `fileAddressFor` 从条目的绝对路径与树的根生成，落在该 tab 自己的 pane 里。 |
 | `other` | 灰显且不可点击，从而完整呈现目录内容。 |
+
+在 `directory` 或 `file` 行上右键会打开该行的菜单：**打开**（与点击相同的展开或查看器认领）、目录的**在终端中打开**、扩展名为脚本的文件（`.sh`、`.bash`、`.zsh`、`.command`、`.fish`、`.csh`、`.py`、`.rb`、`.pl`、`.pm`）的**在终端中运行**、**复制路径**，以及 Host 桌面报告可打开工作区路径时的**在文件管理器中显示**与**在默认应用中打开**。终端动作会打开一个新的右侧栏终端页，并在 shell 附件可写后输入 `cd '<path>'`，脚本则输入 `cd '<dir>' && '<path>'`。未加载终端服务时终端相关条目消失；Host 尚未答复前桌面相关条目消失。
 
 被端点条目上限截断的层以一条标记收尾；空层如实说明；失败的层按错误码各显示一行（`workspace-file/not-found`、`outside-workspace`、`not-directory`），其他情况显示传输层自己的消息。重新读取就地刷新根与展开中的层，读取期间保留显示条目，不重置整棵树；折叠的层在下次打开时重新拉取。没有工作目录的会话只显示一行说明，而不是树。
 
@@ -61,7 +64,7 @@ kind: "package-reference"
 ## 已知限制与暂缓事项
 
 <a id="known-limitations-and-deferred-work"></a>
-- **只有列目录。**没有搜索、产物过滤、拖拽、重命名、右键菜单或当前文件高亮。
+- **只有列目录。**没有搜索、产物过滤、拖拽、重命名、删除、新建文件或当前文件高亮；右键菜单只提供打开与 Host 动作，不做修改操作。
 - **只有一个根。**树以会话工作目录为根；没有办法浏览到它之上，而 Host 本来也拒绝工作区根之外的路径。
 
 <a id="dev-note"></a>

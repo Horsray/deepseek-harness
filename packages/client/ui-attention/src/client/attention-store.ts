@@ -21,6 +21,8 @@ export interface AttentionNotice {
   /** Session display title captured when the reminder was raised. */
   readonly title: string
   readonly kind: AttentionNoticeKind
+  /** Explicit sentence overriding the per-kind template (used by the Settings preview). */
+  readonly text?: string
 }
 
 /** Store the reminder detection reports into and the overlay reads. */

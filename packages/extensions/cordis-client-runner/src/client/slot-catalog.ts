@@ -2997,6 +2997,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     declaredBy: 'an entry in \'settings.section\' (client-ui-settings-general), so it exists while that entry is mounted',
     occupants: [
       'client-locale LanguageRow id \'language\'',
+      'client-ui-attention AttentionSettingsRow id \'attention\'',
       'client-ui-chat LinkOpeningRow id \'link-opening\'',
       'client-ui-chat PerformanceUsageRow id \'performance-usage\'',
       'client-ui-chat TranscriptViewRow id \'transcript-view\'',
@@ -3500,6 +3501,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     slotInject: '',
     declaredBy: 'an entry in \'root\' (client-ui-layout), so it exists while that entry is mounted',
     occupants: [
+      'client-ui-attention AttentionToast id \'attention.toast\'',
       'client-ui-chat QuotaNoticeHost id \'chat.quota-notice\'',
       'client-ui-file-drag FileDragFeedback id \'file-drag.feedback\'',
       'client-ui-plugin-manager PluginRefreshToast id \'plugin-manager.refresh-toast\'',

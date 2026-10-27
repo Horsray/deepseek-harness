@@ -40,7 +40,7 @@ export function AttentionToast({ useNotice, dismiss, t }:
 PropsRuntime<'shell.overlay'> & PropsLocale<'attention'> & InjectFace<AttentionToastInjected>): ReactNode {
   const notice = useNotice(value => value)
   if (notice === null) return null
-  const text = t(sentenceKey(notice.kind), { title: notice.title })
+  const text = notice.text ?? t(sentenceKey(notice.kind), { title: notice.title })
   return notice.kind === 'completion'
     ? <Toast key={`attention-${String(notice.seq)}`} text={text} tone="success" onDone={() => { dismiss(notice.seq) }} />
     : <Toast

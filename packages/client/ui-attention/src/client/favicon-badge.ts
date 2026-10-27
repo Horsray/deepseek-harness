@@ -25,6 +25,17 @@ interface BadgeNavigator {
   clearAppBadge?: () => Promise<void>
 }
 
+/** Desktop shell badge bridge, absent in a plain browser. */
+interface DesktopBadgeScope {
+  dshDesktop?: { badge?: { set(count: number): Promise<void> } }
+}
+
+/** Dock or taskbar badge operations exposed by the Desktop preload. */
+function desktopBadge(): { set(count: number): Promise<void> } | undefined {
+  if (typeof globalThis === 'undefined') return undefined
+  return (globalThis as DesktopBadgeScope).dshDesktop?.badge
+}
+
 /** Shipped page icons; both the light and dark links are painted. */
 const ICON_SELECTOR = 'link[rel~="icon"]'
 /** Square paint size, large enough for two digits at the sizes browsers render. */
@@ -60,12 +71,17 @@ export function createAttentionBadge(): AttentionBadge {
 
   const publish = (count: number): void => {
     const navigatorWithBadge = typeof navigator === 'undefined' ? undefined : navigator as BadgeNavigator
+    const desktop = desktopBadge()
     if (count <= 0) {
       void navigatorWithBadge?.clearAppBadge?.().catch(() => {})
+      void desktop?.set(0).catch(() => {})
       restore()
       return
     }
     void navigatorWithBadge?.setAppBadge?.(count).catch(() => {})
+    // The Desktop shell owns the real application icon, so the same count
+    // reaches both the page icon and the Dock or taskbar badge.
+    void desktop?.set(count).catch(() => {})
     const painted = ++generation
     for (const [index, link] of links.entries()) {
       const href = originals[index]
@@ -93,6 +109,7 @@ export function createAttentionBadge(): AttentionBadge {
       restore()
       const navigatorWithBadge = typeof navigator === 'undefined' ? undefined : navigator as BadgeNavigator
       void navigatorWithBadge?.clearAppBadge?.().catch(() => {})
+      void desktopBadge()?.set(0).catch(() => {})
     },
   }
 }

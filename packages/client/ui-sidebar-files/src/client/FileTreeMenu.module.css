@@ -1,0 +1,5 @@
+/* The portalled menu hangs from a fixed point, so its anchor wrapper only
+   carries the shared Menu component's own measuring span. */
+.anchor {
+  display: none;
+}

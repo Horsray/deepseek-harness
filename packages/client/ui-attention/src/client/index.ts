@@ -75,24 +75,22 @@ export function apply(ctx: ClientContext): void {
     store.dispose()
   }, 'ui-attention: reminder resources')
 
-  const memory: DetectionMemory = { interactions: new Map(), completions: new Set() }
+  const memory: DetectionMemory = { interactions: new Map(), running: new Map() }
   let baseline = false
 
   const announce = (sessionId: SessionId, kind: AttentionNoticeKind, prefs: AttentionSettings): void => {
     const title = ctx.sessions.list.getSnapshot().byId[sessionId]?.displayTitle ?? sessionId
     const toastEnabled = kind === 'completion' ? prefs.completionToast : prefs.interactionToast
     if (toastEnabled) store.show({ sessionId, title, kind })
-    if (prefs.soundEnabled) chime.play()
+    if (prefs.soundEnabled) chime.play(prefs.soundPreset)
   }
 
   const sync = (): void => {
     const prefs = preferences.getSnapshot()
-    const visible = typeof document === 'undefined' || !document.hidden
     const result = detectReminders(
       memory,
       ctx.uiSession.sessionStatus.getSnapshot(),
       ctx.sessions.list.getSnapshot().byId,
-      visible,
       baseline,
     )
     // The first snapshot describes whatever was already true before this
@@ -113,15 +111,6 @@ export function apply(ctx: ClientContext): void {
     }
   }, 'ui-attention: session status')
 
-  // Leaving or entering the tab changes whether the asking card counts as
-  // seen, so the icon count follows visibility without raising a reminder.
-  ctx.effect(() => {
-    if (typeof document === 'undefined') return () => {}
-    const onVisibility = (): void => { sync() }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => { document.removeEventListener('visibilitychange', onVisibility) }
-  }, 'ui-attention: page visibility')
-
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay', id: 'attention.toast', locale: NS,
     inject: (): AttentionToastInjected => ({
@@ -134,7 +123,17 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.general.item', id: 'attention', order: 20, locale: NS,
     inject: (): AttentionSettingsRowInjected => ({
       hooks: { settings: preferences },
-      setField: (field, value) => settings.set(field, value),
+      setToggle: (field, value) => settings.set(field, value),
+      setPreset: preset => settings.set('soundPreset', preset),
+      preview: (preset) => {
+        store.show({
+          sessionId: '' as SessionId,
+          title: '',
+          kind: 'completion',
+          text: ctx.locale.bind(NS)('settings.previewToast'),
+        })
+        if (preferences.getSnapshot().soundEnabled) chime.play(preset)
+      },
     }),
   }, AttentionSettingsRow))
 }

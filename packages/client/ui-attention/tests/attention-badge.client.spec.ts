@@ -20,6 +20,7 @@ afterEach(() => {
   clearAppBadge.mockClear()
   Reflect.deleteProperty(navigator, 'setAppBadge')
   Reflect.deleteProperty(navigator, 'clearAppBadge')
+  Reflect.deleteProperty(globalThis, 'dshDesktop')
 })
 
 /** Shipped icon hrefs in document order. */
@@ -53,6 +54,17 @@ describe('attention badge', () => {
     setAppBadge.mockClear()
     badge.set(5)
     expect(setAppBadge).not.toHaveBeenCalled()
+  })
+
+  it('reports the count to the Desktop shell bridge', () => {
+    const set = vi.fn(() => Promise.resolve())
+    Object.defineProperty(globalThis, 'dshDesktop', { value: { badge: { set } }, configurable: true })
+    const badge = createAttentionBadge()
+    badge.set(4)
+    expect(set).toHaveBeenCalledWith(4)
+    badge.set(0)
+    expect(set).toHaveBeenCalledWith(0)
+    badge.dispose()
   })
 
   it('tolerates an environment without the Badging API', () => {

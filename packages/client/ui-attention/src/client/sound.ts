@@ -1,14 +1,16 @@
 /**
- * Synthesized reminder chime.
+ * Synthesized reminder chime with three timbres.
  *
- * Browsers refuse to start audio without a user gesture, so the chime stays
- * silent until the page has seen one pointer, key, or touch press; after that
- * window the context is resumed and later reminders play. A reminder that
- * arrives before the first gesture is not replayed later — a stale chime
- * would announce work the user has already moved past.
+ * Electron allows audio without a gesture, so a reminder is audible even
+ * before the first click; a plain browser keeps the context suspended until a
+ * gesture, and resuming here means the tones scheduled with a reminder play as
+ * soon as that gesture arrives instead of being dropped. Timbres are
+ * synthesized with harmonics so the package ships no audio asset.
  */
 
-/** One upward two-tone chime; synthesized so no audio asset ships with the plugin. */
+import { DEFAULT_SOUND_PRESET, type SoundPreset } from '../attention-settings.ts'
+
+/** Reminder chime player. */
 export interface AttentionChime {
   /**
    * Start waiting for the first user gesture that unlocks audio.
@@ -17,9 +19,10 @@ export interface AttentionChime {
   arm(): () => void
   /**
    * Play the chime once.
-   * @returns whether audio was unlocked and the chime actually played.
+   * @param preset - timbre to synthesize; the default timbre applies when omitted.
+   * @returns whether an audio context was available to schedule the tones.
    */
-  play(): boolean
+  play(preset?: SoundPreset): boolean
   /** Release the audio context and pending listeners. */
   dispose(): void
 }
@@ -44,11 +47,77 @@ function audioContextConstructor(): AudioContextConstructor | undefined {
 /** Unlock event types that browsers accept as a user gesture. */
 const GESTURES = ['pointerdown', 'keydown', 'touchstart'] as const
 
-/** Two ascending tones, in seconds from the context's current time. */
-const TONES = [
-  { frequency: 880, start: 0, duration: 0.09 },
-  { frequency: 1174.66, start: 0.1, duration: 0.14 },
-] as const
+/** One harmonic partial of a synthesized note. */
+interface Harmonic {
+  /** Frequency multiplier over the fundamental. */
+  readonly ratio: number
+  /** Relative level of this partial. */
+  readonly gain: number
+}
+
+/** One note of a timbre. */
+interface Tone {
+  readonly frequency: number
+  /** Seconds after the chime starts. */
+  readonly start: number
+  readonly duration: number
+  /** Peak level of the note. */
+  readonly volume: number
+  readonly harmonics: readonly Harmonic[]
+  readonly wave: OscillatorType
+}
+
+/** Bright glass timbre: high, quick decay, four partials. */
+const GLASS: readonly Tone[] = [{
+  frequency: 880, start: 0, duration: 0.6, volume: 0.12, wave: 'sine',
+  harmonics: [{ ratio: 1, gain: 1 }, { ratio: 2, gain: 0.5 }, { ratio: 3, gain: 0.25 }, { ratio: 4, gain: 0.1 }],
+}]
+
+/** Rising timbre: E5, A5, C6 arpeggio, soft partials. */
+const ASCENDING: readonly Tone[] = [
+  { frequency: 659.25, start: 0, duration: 0.5, volume: 0.1, wave: 'sine', harmonics: [{ ratio: 1, gain: 1 }, { ratio: 2, gain: 0.3 }] },
+  { frequency: 880, start: 0.09, duration: 0.5, volume: 0.1, wave: 'sine', harmonics: [{ ratio: 1, gain: 1 }, { ratio: 2, gain: 0.3 }] },
+  { frequency: 1046.5, start: 0.18, duration: 0.5, volume: 0.1, wave: 'sine', harmonics: [{ ratio: 1, gain: 1 }, { ratio: 2, gain: 0.3 }] },
+]
+
+/** Warm marimba timbre: low fundamental with strong fourth and eighth partials. */
+const MARIMBA: readonly Tone[] = [{
+  frequency: 523.25, start: 0, duration: 0.4, volume: 0.12, wave: 'sine',
+  harmonics: [{ ratio: 1, gain: 0.6 }, { ratio: 4, gain: 1 }, { ratio: 8, gain: 0.4 }],
+}]
+
+/** Timbres by preset id. */
+const TIMBRES: Readonly<Record<SoundPreset, readonly Tone[]>> = {
+  glass: GLASS,
+  ascending: ASCENDING,
+  marimba: MARIMBA,
+}
+
+/**
+ * Schedule every partial of every tone on one context.
+ * @param context - running audio context.
+ * @param tones - timbre to schedule.
+ */
+function schedule(context: AudioContext, tones: readonly Tone[]): void {
+  const start = context.currentTime
+  for (const tone of tones) {
+    for (const harmonic of tone.harmonics) {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      const from = start + tone.start
+      const to = from + tone.duration
+      oscillator.type = tone.wave
+      oscillator.frequency.setValueAtTime(tone.frequency * harmonic.ratio, from)
+      gain.gain.setValueAtTime(0.0001, from)
+      gain.gain.exponentialRampToValueAtTime(tone.volume * harmonic.gain, from + 0.006)
+      gain.gain.exponentialRampToValueAtTime(0.0001, to)
+      oscillator.connect(gain)
+      gain.connect(context.destination)
+      oscillator.start(from)
+      oscillator.stop(to + 0.05)
+    }
+  }
+}
 
 /**
  * Create the chime player.
@@ -99,24 +168,13 @@ export function createAttentionChime(): AttentionChime {
 
   return {
     arm,
-    play: () => {
+    play: (preset = DEFAULT_SOUND_PRESET) => {
       const created = ensure()
-      if (created === undefined || created.state !== 'running') return false
-      const start = created.currentTime
-      for (const tone of TONES) {
-        const oscillator = created.createOscillator()
-        const gain = created.createGain()
-        const from = start + tone.start
-        const to = from + tone.duration
-        oscillator.frequency.value = tone.frequency
-        gain.gain.setValueAtTime(0.0001, from)
-        gain.gain.exponentialRampToValueAtTime(0.18, from + 0.015)
-        gain.gain.exponentialRampToValueAtTime(0.0001, to)
-        oscillator.connect(gain)
-        gain.connect(created.destination)
-        oscillator.start(from)
-        oscillator.stop(to)
-      }
+      if (created === undefined) return false
+      // A plain browser keeps the context suspended until a gesture; resuming
+      // here lets the scheduled tones play as soon as that gesture arrives.
+      if (created.state === 'suspended') void created.resume().catch(() => {})
+      schedule(created, TIMBRES[preset])
       return true
     },
     dispose: () => {

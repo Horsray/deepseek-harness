@@ -27,6 +27,7 @@ export const DESKTOP_IPC = {
   fileDragStart: 'dsh-desktop:file-drag-start',
   fileDragRelease: 'dsh-desktop:file-drag-release',
   deviceInfo: 'dsh-desktop:device-info',
+  badgeSet: 'dsh-desktop:badge-set',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
   updatesStatus: 'dsh-desktop:updates-status',
@@ -86,6 +87,13 @@ export interface DshDesktopProductApi {
    * @returns `name=value` fields separated by `; `, with no hostname, user name, or serial number.
    */
   deviceInfo(): Promise<string>
+  readonly badge: {
+    /**
+     * Set the application icon badge count; zero clears it.
+     * @param count - reminders the user has not acknowledged.
+     */
+    set(count: number): Promise<void>
+  }
   readonly updates: {
     status(): Promise<DesktopUpdatePresentation>
     open(): Promise<void>

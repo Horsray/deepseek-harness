@@ -11,6 +11,8 @@ import type { RenderResult } from '@testing-library/react'
 import { onTestFinished, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SidebarRightTabActions } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
@@ -47,6 +49,15 @@ interface MockedTabActions {
 }
 
 /** What a spec holds after mounting: the rendered view and every hand on the tree. */
+/** The row menu's gestures as recording mocks. */
+export interface MockedRowMenu {
+  readonly copyPath: Mock<(path: string) => void>
+  readonly reveal: Mock<(path: string) => void>
+  readonly openInApp: Mock<(path: string) => void>
+  readonly runInTerminal: Mock<(path: string, kind: 'file' | 'directory') => void>
+}
+
+/** What a spec holds after mounting: the rendered view and every hand on the tree. */
 export interface Mounted {
   readonly view: RenderResult
   readonly instance: FilesStoreInstance
@@ -54,6 +65,13 @@ export interface Mounted {
   readonly face: FilesInjected
   readonly controller: AbortController
   readonly tabActions: MockedTabActions
+  readonly menu: MockedRowMenu
+  /** Host desktop availability the body reads. */
+  readonly desktop: SnapshotStore<boolean | null>
+  /** Whether the terminal handoff is loaded. */
+  readonly terminalReady: SnapshotStore<boolean>
+  /** Ask for Host desktop availability, as the body does on mount. */
+  readonly loadDesktop: Mock<() => Promise<void>>
   /** Render a fresh body over the same store and face, as a tab switch remounts it. */
   readonly remount: () => RenderResult
 }
@@ -74,6 +92,15 @@ function harness(cwd: string | null, refreshShortcut?: ReturnType<FilesBodyProps
     openTab: vi.fn<SidebarRightTabActions['openTab']>(),
     close: vi.fn<SidebarRightTabActions['close']>(),
   }
+  const menu: MockedRowMenu = {
+    copyPath: vi.fn<(path: string) => void>(),
+    reveal: vi.fn<(path: string) => void>(),
+    openInApp: vi.fn<(path: string) => void>(),
+    runInTerminal: vi.fn<(path: string, kind: 'file' | 'directory') => void>(),
+  }
+  const desktop = createSnapshotStore<boolean | null>(null)
+  const terminalReady = createSnapshotStore(true)
+  const loadDesktop = vi.fn(async () => {})
   const sessions = { byId: cwd === null ? {} : { [SESSION]: { cwd } } } as unknown as SessionListState
   const shared = {
     // A page tab's address is the shell's to mint; the body never reads it.
@@ -89,13 +116,17 @@ function harness(cwd: string | null, refreshShortcut?: ReturnType<FilesBodyProps
     }),
     renderSlot: () => null,
     sessionId: SESSION,
+    usePathDesktop: <S,>(sel: (value: boolean | null) => S) => sel(desktop.getSnapshot()),
+    useTerminalReady: <S,>(sel: (value: boolean) => S) => sel(terminalReady.getSnapshot()),
+    loadDesktop,
+    menu,
     useSessions: <S,>(sel: (s: SessionListState) => S) => sel(sessions),
     useStore: hookOf(instance),
     actions: instance.actions,
     ...face,
     t: makeTranslate(zh),
   }
-  return { instance, script, face, controller, tabActions, shared }
+  return { instance, script, face, controller, tabActions, menu, desktop, terminalReady, loadDesktop, shared }
 }
 
 /**

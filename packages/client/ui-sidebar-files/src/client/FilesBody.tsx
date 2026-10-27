@@ -5,15 +5,18 @@
  * for goes through its injected face. The component itself only decides what to
  * draw for each absolute path and what a click means: a directory toggles, a
  * file opens through the owner's `tabActions` for a `file:` viewer to claim, and
- * anything else is shown but refuses to open. The header uses the shared
- * PathLabel for the root, followed by reload and workspace directory actions.
+ * anything else is shown but refuses to open. A right-click opens one row's
+ * menu instead: open, run in a terminal, copy the path, or hand the path to a
+ * native application. The header uses the shared PathLabel for the root,
+ * followed by reload and workspace directory actions.
  */
-import { useEffect, useLayoutEffect, useRef } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import clsx from 'clsx'
 import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
+import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {
-  PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore, TranslateNS,
+  InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore, TranslateNS,
 } from '@deepseek-ai/dsh-client-ui-slots'
 import {
   FileTypeIcon, IconFolderCloseRegular, IconFolderOpenRegular, IconRefreshOutlineRegular, Tooltip, classifyFileType,
@@ -21,18 +24,47 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
+import { isRunnableScript } from './context-menu.ts'
+import type { FileRowKind } from './context-menu.ts'
 import { childPath } from './face.ts'
 import type { FilesInjected } from './face.ts'
+import { FileTreeMenu } from './FileTreeMenu.tsx'
+import type { FileTreeMenuTarget } from './FileTreeMenu.tsx'
 import type {} from './locales.ts'
 import type { FilesTabState, createFilesStore } from './store.ts'
 import css from './FilesBody.module.css'
 
-/** The body's composed props: the tab it draws, its store, its face, and its copy. */
+/** Host capabilities and row gestures the context menu runs, bound to the tab's Session. */
+export interface FilesMenuInjected {
+  /** Registrant-private reactivity the renderer binds as `usePathDesktop` and `useTerminalReady`. */
+  readonly hooks: {
+    /** Whether the Host desktop can hand a path to native applications; null until the Host answers. */
+    readonly pathDesktop: ObservableSnapshot<boolean | null>
+    /** Whether a terminal service is loaded, so the run gesture has somewhere to type. */
+    readonly terminalReady: ObservableSnapshot<boolean>
+  }
+  /** Ask the Host once whether it can hand paths to native applications. */
+  readonly loadDesktop: () => Promise<void>
+  /** What one row's menu asks of the Host; the body names the row it acts on. */
+  readonly menu: {
+    /** Copy the row's absolute path. */
+    readonly copyPath: (path: string) => void
+    /** Reveal the row in the file manager. */
+    readonly reveal: (path: string) => void
+    /** Open the row in its default application. */
+    readonly openInApp: (path: string) => void
+    /** Type the row's command into a fresh terminal. */
+    readonly runInTerminal: (path: string, kind: FileRowKind) => void
+  }
+}
+
+/** The body's composed props: the tab it draws, its store, its face, its copy, and its row-menu capabilities. */
 export type FilesBodyProps =
   & PropsRuntime<'sidebar.right.pane.tab'>
   & PropsRenderSlots<'sidebar.right.tab.files.actions'>
   & PropsStore<ReturnType<typeof createFilesStore>>
   & FilesInjected
+  & InjectFace<FilesMenuInjected>
   & PropsLocale<'sidebarFiles'>
 
 /** Natural, case-insensitive name order, so `file2` precedes `file10`. */
@@ -69,22 +101,34 @@ export function failureLine(t: TranslateNS<'sidebarFiles'>, failure: RemoteFailu
   }
 }
 
-/** What every level shares: the tab's tree and the two gestures. */
+/** What every level shares: the tab's tree and its gestures. */
 interface TreeContext {
   readonly state: FilesTabState
   readonly onToggle: (parent: string, path: string) => void
   readonly onOpen: (path: string) => void
+  readonly onMenu: (target: FileTreeMenuTarget) => void
   readonly t: TranslateNS<'sidebarFiles'>
 }
 
 /** One entry's row, and its children when it is an expanded directory. */
 function Entry({ parent, entry, tree }: { parent: string; entry: WorkspaceDirectoryEntry; tree: TreeContext }): ReactNode {
   const path = childPath(parent, entry.name)
+  /** Open the row's menu where the reader right-clicked. */
+  const menu = (kind: FileRowKind) => (event: MouseEvent<HTMLButtonElement>): void => {
+    event.preventDefault()
+    tree.onMenu({ path, parent, name: entry.name, kind, x: event.clientX, y: event.clientY })
+  }
   if (entry.type === 'directory') {
     const expanded = tree.state.expanded.includes(path)
     return (
       <li className={css.item} data-files-entry="directory" data-files-path={path}>
-        <button type="button" className={css.row} aria-expanded={expanded} onClick={() => { tree.onToggle(parent, path) }}>
+        <button
+          type="button"
+          className={css.row}
+          aria-expanded={expanded}
+          onClick={() => { tree.onToggle(parent, path) }}
+          onContextMenu={menu('directory')}
+        >
           {expanded ? <IconFolderOpenRegular className={css.icon} /> : <IconFolderCloseRegular className={css.icon} />}
           <span className={css.name}>{entry.name}</span>
         </button>
@@ -95,7 +139,7 @@ function Entry({ parent, entry, tree }: { parent: string; entry: WorkspaceDirect
   if (entry.type === 'file') {
     return (
       <li className={css.item} data-files-entry="file" data-files-path={path}>
-        <button type="button" className={css.row} onClick={() => { tree.onOpen(path) }}>
+        <button type="button" className={css.row} onClick={() => { tree.onOpen(path) }} onContextMenu={menu('file')}>
           <FileTypeIcon kind={classifyFileType(entry.name)} size={16} className={css.fileIcon} />
           <span className={css.name}>{entry.name}</span>
         </button>
@@ -140,14 +184,21 @@ function Level({ path, tree }: { path: string; tree: TreeContext }): ReactNode {
 export function FilesBody({
   useTabInfo, sessionId, useSessions, useStore, actions,
   start, refresh, setAutoRefresh, toggle, t, renderSlot,
+  usePathDesktop, useTerminalReady, loadDesktop, menu: rowMenu,
 }: FilesBodyProps): ReactNode {
   const { tab } = useTabInfo()
   useEffect(() => tab.actions.bindCommands({ refresh: () => { refresh(tab.id) } }), [tab.actions, tab.id, refresh])
   const { signal, actions: tabActions } = tab
   const cwd = useSessions(sessions => sessions.byId[sessionId]?.cwd)
   const state = useStore(store => store.byTab[tab.id])
+  const desktop = usePathDesktop(value => value)
+  const terminalReady = useTerminalReady(value => value)
+  const [menu, setMenu] = useState<FileTreeMenuTarget | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
+  useEffect(() => {
+    if (desktop === null) void loadDesktop()
+  }, [desktop, loadDesktop])
   // Come back where the reader was: loaded levels outlive the body in the
   // store, so a remounted tree lays out at its full height before this runs
   // and the stored offset re-lands exactly. A fresh tree stores 0.
@@ -185,7 +236,13 @@ export function FilesBody({
     onToggle: (parent, path) => { toggle(tab.id, parent, path, state.expanded, signal) },
     // Every row is under the tree's root, so its address is session-relative.
     onOpen: (path) => { tabActions.openResource(fileAddressFor(sessionId, state.root, path)) },
+    onMenu: (target) => { setMenu(target) },
     t,
+  }
+  /** Open one menu row: a directory toggles, a file opens in a viewer. */
+  const openRow = (target: FileTreeMenuTarget): void => {
+    if (target.kind === 'directory') toggle(tab.id, target.parent, target.path, state.expanded, signal)
+    else tabActions.openResource(fileAddressFor(sessionId, state.root, target.path))
   }
   const reload = (): void => {
     refresh(tab.id)
@@ -226,6 +283,21 @@ export function FilesBody({
       >
         <ul className={css.level}><Level path={state.root} tree={tree} /></ul>
       </div>
+      {menu !== null && (
+        <FileTreeMenu
+          target={menu}
+          desktop={desktop === true}
+          terminalAvailable={terminalReady}
+          runnable={isRunnableScript(menu.name)}
+          t={t}
+          open={() => { openRow(menu) }}
+          terminal={() => { rowMenu.runInTerminal(menu.path, menu.kind) }}
+          copyPath={() => { rowMenu.copyPath(menu.path) }}
+          reveal={() => { rowMenu.reveal(menu.path) }}
+          openInApp={() => { rowMenu.openInApp(menu.path) }}
+          close={() => { setMenu(null) }}
+        />
+      )}
     </div>
   )
 }

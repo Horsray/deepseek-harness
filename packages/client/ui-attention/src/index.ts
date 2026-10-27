@@ -11,8 +11,8 @@ import { AttentionSettingsFields } from './attention-settings.ts'
 import type { AttentionSettings } from './attention-settings.ts'
 
 export {
-  ATTENTION_SETTINGS_NAMESPACE, DEFAULT_ATTENTION_SETTINGS,
-  type AttentionSettings,
+  ATTENTION_SETTINGS_NAMESPACE, DEFAULT_ATTENTION_SETTINGS, DEFAULT_SOUND_PRESET, SOUND_PRESETS,
+  type AttentionSettings, type SoundPreset,
 } from './attention-settings.ts'
 
 /** Live reminder preferences projected to the browser. */
@@ -23,6 +23,8 @@ export interface Config {
   completionToast: Volatile<AttentionSettings['completionToast']>
   /** Play the synthesized chime alongside a reminder toast. */
   soundEnabled: Volatile<AttentionSettings['soundEnabled']>
+  /** Timbral preset the chime plays. */
+  soundPreset: Volatile<AttentionSettings['soundPreset']>
   /** Count unacknowledged reminders on the page icon. */
   badgeEnabled: Volatile<AttentionSettings['badgeEnabled']>
 }
@@ -32,6 +34,7 @@ export const Config = z.object({
   interactionToast: AttentionSettingsFields.interactionToast.volatile(),
   completionToast: AttentionSettingsFields.completionToast.volatile(),
   soundEnabled: AttentionSettingsFields.soundEnabled.volatile(),
+  soundPreset: AttentionSettingsFields.soundPreset.volatile(),
   badgeEnabled: AttentionSettingsFields.badgeEnabled.volatile(),
 })
 

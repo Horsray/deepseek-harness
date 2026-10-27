@@ -16,6 +16,8 @@ import { apply, inject } from '../src/client/index.ts'
 import { apply as hostApply } from '../src/index.ts'
 import { FilesBody } from '../src/client/FilesBody.tsx'
 import { FilesTitle } from '../src/client/FilesTitle.tsx'
+import { WorkspaceFilesButton } from '../src/client/WorkspaceFilesButton.tsx'
+import type { WorkspaceFilesButtonInjected } from '../src/client/WorkspaceFilesButton.tsx'
 import { en, ja, zh, es, fr, de, ru, pt } from '../src/client/locales.ts'
 
 interface Recorded {
@@ -49,7 +51,8 @@ async function boot() {
     }),
   }
   const workspaceFiles = { list: vi.fn() }
-  const sidebar = { commandTarget: vi.fn(), openTabFromTarget: vi.fn() }
+  const session = { canOpenWorkspacePath: vi.fn(), openWorkspacePath: vi.fn() }
+  const sidebar = { commandTarget: vi.fn(), openTabFromTarget: vi.fn(), openTab: vi.fn() }
   const commands: ShortcutCommand[] = []
   ctx.provide('shortcuts', { register: (command: ShortcutCommand) => {
     commands.push(command)
@@ -59,11 +62,12 @@ async function boot() {
   ctx.provide('sidebarRightTabs', tabs as never)
   ctx.provide('slots', slots as never)
   ctx.provide('locale', locale as never)
-  ctx.provide('remote', { workspaceFiles } as never)
+  ctx.provide('remote', { workspaceFiles, session } as never)
   ctx.provide('remote.workspaceFiles', workspaceFiles as never)
+  ctx.provide('remote.session', session as never)
   const fiber = ctx.plugin({ inject: [...inject], apply })
   await fiber.await()
-  return { tabs, registered, dictionaries, fiber, sidebar, commands }
+  return { tabs, registered, dictionaries, fiber, sidebar, session, commands }
 }
 
 describe('ui-sidebar-files apply', () => {
@@ -98,11 +102,23 @@ describe('ui-sidebar-files apply', () => {
     // The seat key is the implementation's id, not the kind: an extension may
     // take the kind over, and the seat must still find this body.
     expect(registered.map(entry => [entry.name, entry.key, entry.locale, entry.component])).toEqual([
+      ['conversation.session.header.utilities', undefined, 'sidebarFiles', WorkspaceFilesButton],
       ['sidebar.right.pane.tab', FILES_ID, 'sidebarFiles', FilesBody],
       ['sidebar.right.pane.tab.title', FILES_ID, undefined, FilesTitle],
     ])
-    expect(registered[0]?.store).toBeDefined()
-    expect(typeof registered[0]?.inject).toBe('function')
+    expect(registered[1]?.store).toBeDefined()
+    expect(typeof registered[1]?.inject).toBe('function')
+  })
+
+  it('opens the files page from the conversation header control', async () => {
+    const h = await boot()
+    try {
+      const header = h.registered.find(entry => entry.name === 'conversation.session.header.utilities')
+      expect(header).toBeDefined()
+      const injected = (header?.inject as () => WorkspaceFilesButtonInjected)()
+      injected.open()
+      expect(h.sidebar.openTab).toHaveBeenCalledWith('files')
+    } finally { await h.fiber.dispose() }
   })
 
   it('takes every registration back when the plugin is disposed', async () => {

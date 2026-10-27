@@ -807,6 +807,12 @@ async function main(): Promise<void> {
     assertProductSender(event)
     return readDeviceInfo()
   })
+  ipcMain.handle(DESKTOP_IPC.badgeSet, (event, count: unknown) => {
+    assertProductSender(event)
+    // The renderer owns how many reminders are pending; the shell only bounds
+    // the value to a non-negative integer before macOS renders it on the Dock.
+    app.setBadgeCount(typeof count === 'number' && Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0)
+  })
   ipcMain.handle(DESKTOP_IPC.onboardingApiKey, async (event) => {
     assertProductSender(event)
     return (await readWelcomeState()).hasApiKey

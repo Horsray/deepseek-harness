@@ -7,7 +7,6 @@ export const zh = {
   'toast.interaction.question': '{title} 正在等待你的回答',
   'toast.completion': '{title} 已完成',
   'settings.title': '提醒',
-  'settings.description': '会话需要你确认，或后台会话完成时提醒你',
   'settings.interaction': '交互提醒',
   'settings.interactionDescription': '会话等待审批、计划确认或回答时提醒',
   'settings.completion': '完成提醒',
@@ -16,7 +15,14 @@ export const zh = {
   'settings.soundDescription': '提醒时播放提示音',
   'settings.badge': '图标计数',
   'settings.badgeDescription': '在页面图标上显示待处理提醒数',
+  'settings.soundPreset': '提示音音色',
+  'sound.glass': '清脆',
+  'sound.ascending': '上行',
+  'sound.marimba': '木琴',
   'settings.error': '无法保存设置',
+  'settings.preview': '测试提醒',
+  'settings.previewDescription': '立即显示一条提醒并播放提示音',
+  'settings.previewToast': '提醒测试：看到这条说明提醒已生效',
 } satisfies Record<string, string>
 
 /** The attention namespace key union. */
@@ -29,7 +35,6 @@ export const en = {
   'toast.interaction.question': '{title} is waiting for your answer',
   'toast.completion': '{title} finished',
   'settings.title': 'Reminders',
-  'settings.description': 'Notify you when a Session needs confirmation or a background Session finishes',
   'settings.interaction': 'Interaction reminders',
   'settings.interactionDescription': 'Remind when a Session waits for approval, plan review, or an answer',
   'settings.completion': 'Completion reminders',
@@ -38,7 +43,14 @@ export const en = {
   'settings.soundDescription': 'Play a chime with each reminder',
   'settings.badge': 'Icon count',
   'settings.badgeDescription': 'Show pending reminders on the page icon',
+  'settings.soundPreset': 'Chime timbre',
+  'sound.glass': 'Glass',
+  'sound.ascending': 'Rising',
+  'sound.marimba': 'Marimba',
   'settings.error': 'Could not save the setting',
+  'settings.preview': 'Test reminder',
+  'settings.previewDescription': 'Show a reminder and play the chime right now',
+  'settings.previewToast': 'Reminder test: you can see this, so reminders work',
 } satisfies Record<AttentionKey, string>
 
 /** Japanese dictionary. */
@@ -48,7 +60,6 @@ export const ja = {
   'toast.interaction.question': '{title} が回答待ちです',
   'toast.completion': '{title} が完了しました',
   'settings.title': 'リマインダー',
-  'settings.description': 'セッションの確認待ちやバックグラウンドのセッション完了時に通知します',
   'settings.interaction': 'インタラクションの通知',
   'settings.interactionDescription': 'セッションが承認・計画確認・回答を待つときに通知します',
   'settings.completion': '完了の通知',
@@ -57,7 +68,14 @@ export const ja = {
   'settings.soundDescription': '通知時に通知音を再生します',
   'settings.badge': 'アイコンカウント',
   'settings.badgeDescription': '未確認のリマインダー数をページアイコンに表示します',
+  'settings.soundPreset': '通知音の音色',
+  'sound.glass': 'ガラス',
+  'sound.ascending': '上昇',
+  'sound.marimba': 'マリンバ',
   'settings.error': '設定を保存できませんでした',
+  'settings.preview': '通知をテスト',
+  'settings.previewDescription': '今すぐ通知を表示して通知音を再生します',
+  'settings.previewToast': '通知テスト：これが見えれば通知は動作しています',
 } satisfies Record<AttentionKey, string>
 
 /** Spanish dictionary. */
@@ -67,7 +85,6 @@ export const es = {
   'toast.interaction.question': '{title} está esperando tu respuesta',
   'toast.completion': '{title} ha terminado',
   'settings.title': 'Recordatorios',
-  'settings.description': 'Avísame cuando una sesión necesite confirmación o una sesión en segundo plano termine',
   'settings.interaction': 'Recordatorios de interacción',
   'settings.interactionDescription': 'Avisar cuando una sesión espere aprobación, revisión del plan o una respuesta',
   'settings.completion': 'Recordatorios de finalización',
@@ -76,7 +93,14 @@ export const es = {
   'settings.soundDescription': 'Reproducir un tono con cada recordatorio',
   'settings.badge': 'Recuento en el icono',
   'settings.badgeDescription': 'Mostrar los recordatorios pendientes en el icono de la página',
+  'settings.soundPreset': 'Timbre',
+  'sound.glass': 'Cristal',
+  'sound.ascending': 'Ascendente',
+  'sound.marimba': 'Marimba',
   'settings.error': 'No se pudo guardar la configuración',
+  'settings.preview': 'Probar recordatorio',
+  'settings.previewDescription': 'Mostrar un recordatorio y reproducir el tono ahora',
+  'settings.previewToast': 'Prueba de recordatorio: si lo ves, funciona',
 } satisfies Record<AttentionKey, string>
 
 /** French dictionary. */
@@ -86,7 +110,6 @@ export const fr = {
   'toast.interaction.question': '{title} attend votre réponse',
   'toast.completion': '{title} est terminé',
   'settings.title': 'Rappels',
-  'settings.description': 'Vous avertir lorsqu’une session attend une confirmation ou qu’une session en arrière-plan se termine',
   'settings.interaction': 'Rappels d’interaction',
   'settings.interactionDescription': 'Rappeler lorsqu’une session attend une approbation, une révision du plan ou une réponse',
   'settings.completion': 'Rappels de fin',
@@ -95,7 +118,14 @@ export const fr = {
   'settings.soundDescription': 'Jouer un carillon à chaque rappel',
   'settings.badge': 'Compteur d’icône',
   'settings.badgeDescription': 'Afficher les rappels en attente sur l’icône de la page',
+  'settings.soundPreset': 'Timbre',
+  'sound.glass': 'Verre',
+  'sound.ascending': 'Montant',
+  'sound.marimba': 'Marimba',
   'settings.error': 'Impossible d’enregistrer le paramètre',
+  'settings.preview': 'Tester le rappel',
+  'settings.previewDescription': 'Afficher un rappel et jouer le carillon maintenant',
+  'settings.previewToast': 'Test de rappel : si vous le voyez, cela fonctionne',
 } satisfies Record<AttentionKey, string>
 
 /** German dictionary. */
@@ -105,7 +135,6 @@ export const de = {
   'toast.interaction.question': '{title} wartet auf deine Antwort',
   'toast.completion': '{title} ist fertig',
   'settings.title': 'Erinnerungen',
-  'settings.description': 'Benachrichtigt dich, wenn eine Sitzung eine Bestätigung braucht oder eine Sitzung im Hintergrund endet',
   'settings.interaction': 'Interaktionserinnerungen',
   'settings.interactionDescription': 'Erinnern, wenn eine Sitzung auf Freigabe, Planprüfung oder eine Antwort wartet',
   'settings.completion': 'Abschlusserinnerungen',
@@ -114,7 +143,14 @@ export const de = {
   'settings.soundDescription': 'Bei jeder Erinnerung einen Ton abspielen',
   'settings.badge': 'Symbolzähler',
   'settings.badgeDescription': 'Ausstehende Erinnerungen am Seitensymbol anzeigen',
+  'settings.soundPreset': 'Klangfarbe',
+  'sound.glass': 'Glas',
+  'sound.ascending': 'Aufsteigend',
+  'sound.marimba': 'Marimba',
   'settings.error': 'Einstellung konnte nicht gespeichert werden',
+  'settings.preview': 'Erinnerung testen',
+  'settings.previewDescription': 'Sofort eine Erinnerung anzeigen und den Ton abspielen',
+  'settings.previewToast': 'Erinnerungstest: wenn du das siehst, funktioniert es',
 } satisfies Record<AttentionKey, string>
 
 /** Russian dictionary. */
@@ -124,7 +160,6 @@ export const ru = {
   'toast.interaction.question': '{title} ожидает вашего ответа',
   'toast.completion': '{title} завершён',
   'settings.title': 'Напоминания',
-  'settings.description': 'Сообщать, когда сеансу нужно подтверждение или фоновый сеанс завершён',
   'settings.interaction': 'Напоминания о взаимодействии',
   'settings.interactionDescription': 'Напоминать, когда сеанс ждёт подтверждения, проверки плана или ответа',
   'settings.completion': 'Напоминания о завершении',
@@ -133,7 +168,14 @@ export const ru = {
   'settings.soundDescription': 'Проигрывать звук при каждом напоминании',
   'settings.badge': 'Счётчик на значке',
   'settings.badgeDescription': 'Показывать ожидающие напоминания на значке страницы',
+  'settings.soundPreset': 'Тембр',
+  'sound.glass': 'Стекло',
+  'sound.ascending': 'Восходящий',
+  'sound.marimba': 'Маримба',
   'settings.error': 'Не удалось сохранить настройку',
+  'settings.preview': 'Проверить напоминание',
+  'settings.previewDescription': 'Показать напоминание и проиграть звук сейчас',
+  'settings.previewToast': 'Тест напоминания: если вы это видите, всё работает',
 } satisfies Record<AttentionKey, string>
 
 /** Portuguese dictionary. */
@@ -143,7 +185,6 @@ export const pt = {
   'toast.interaction.question': '{title} está aguardando sua resposta',
   'toast.completion': '{title} foi concluída',
   'settings.title': 'Lembretes',
-  'settings.description': 'Avise quando uma sessão precisar de confirmação ou uma sessão em segundo plano terminar',
   'settings.interaction': 'Lembretes de interação',
   'settings.interactionDescription': 'Avisar quando uma sessão aguardar aprovação, revisão do plano ou resposta',
   'settings.completion': 'Lembretes de conclusão',
@@ -152,7 +193,14 @@ export const pt = {
   'settings.soundDescription': 'Reproduzir um tom a cada lembrete',
   'settings.badge': 'Contagem no ícone',
   'settings.badgeDescription': 'Mostrar lembretes pendentes no ícone da página',
+  'settings.soundPreset': 'Timbre',
+  'sound.glass': 'Vidro',
+  'sound.ascending': 'Ascendente',
+  'sound.marimba': 'Marimba',
   'settings.error': 'Não foi possível salvar a configuração',
+  'settings.preview': 'Testar lembrete',
+  'settings.previewDescription': 'Mostrar um lembrete e reproduzir o tom agora',
+  'settings.previewToast': 'Teste de lembrete: se você vê isto, funciona',
 } satisfies Record<AttentionKey, string>
 
 /** Copy keys the reminder banner reads. */

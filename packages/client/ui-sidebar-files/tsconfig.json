@@ -46,6 +46,15 @@
     },
     {
       "path": "../shortcuts/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/terminal-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-conversation/tsconfig.client.json"
     }
   ]
 }

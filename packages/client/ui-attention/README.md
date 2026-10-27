@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 The Web GUI has two states that need the user back: a Session waiting on an approval, plan review, or answer, and a background Session that finished a Turn the user has not looked at. This package turns both into one reminder — an app-wide toast, a short synthesized chime, and a count on the page icon — switchable from Settings → General.
 
-The reminder never fires for the Session in front of the user, whose asking card is already on screen. The page-icon count still covers it once the user switches away.
+Reminders are not filtered by focus. A desktop window keeps reporting itself visible after the user switches to another app, so suppressing by visibility would drop exactly the reminders that matter; a new request and a finished Turn each announce once, wherever the user is looking.
 
 ## Table of Contents
 
@@ -33,6 +33,7 @@ The Web bundle includes this plugin; Desktop uses that bundle too. Four preferen
 | `interactionToast` | `true` | Toast when a Session starts waiting for approval, plan review, or an answer |
 | `completionToast` | `true` | Toast when a background Session finishes a Turn |
 | `soundEnabled` | `true` | Play the chime alongside a reminder toast |
+| `soundPreset` | `glass` | Chime timbre: `glass`, `ascending`, or `marimba` |
 | `badgeEnabled` | `true` | Count unacknowledged reminders on the page icon |
 
 All four apply to the open browser immediately; none needs a Host restart. Disable the whole plugin through a profile patch to remove the reminders and the Settings rows:
@@ -44,7 +45,9 @@ All four apply to the open browser immediately; none needs a Host restart. Disab
 
 The chime cannot start before the page has seen a user gesture, which browsers require for audio. The first pointer press, key press, or touch unlocks it; until then reminders are still shown, they simply stay silent. A reminder that arrived before the unlock is not replayed afterwards.
 
-The page-icon count paints a red badge with the number over the shipped favicon and asks the Badging API in parallel. It reaches zero when the asking interactions are answered and the finished Sessions are opened again.
+Choosing a timbre auditions it immediately, and **Test reminder** shows one banner with the current sound so the whole reminder path can be confirmed without waiting for a real request.
+
+The page-icon count paints a red badge with the number over the shipped favicon, asks the Badging API in parallel, and in the Desktop app also sets the Dock badge through the shell bridge. It reaches zero when the asking interactions are answered and the finished Sessions are opened again.
 
 -----
 
@@ -89,8 +92,8 @@ None; the plugin sends no provider requests and changes no cached prefix.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- The Desktop app icon (Dock badge or taskbar overlay) is not updated: the preload bridge exposes no badge channel, so only the in-page favicon and the Badging API carry the count.
+- On Windows the taskbar overlay badge is not drawn: `app.setBadgeCount` is a no-op there, so the in-page count is the only cue.
 - The Badging API takes effect only for an installed app; in an ordinary browser tab it is a no-op and the favicon badge is the visible count.
 - The chime has one fixed tone and volume; there is no per-event sound choice or volume control.
-- A reminder suppressed because its Session was in the foreground is not re-raised when the user switches away afterwards; the page-icon count is the remaining cue.
+- A Turn the user stopped still announces as finished: the client status source exposes a running-to-idle edge without distinguishing a cancellation from a completion.
 - Painting the badge requires a canvas implementation and a same-origin icon; an embedded webview without canvas keeps the shipped icon while the Badging API still receives the count.
