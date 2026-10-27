@@ -1,0 +1,3 @@
+- insert:
+    - id: agnes-media
+      name: '@deepseek-ai/dsh-experimental-agnes-media'

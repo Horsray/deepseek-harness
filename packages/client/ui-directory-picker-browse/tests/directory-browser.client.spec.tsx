@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
+import type { DirectoryEntry, DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
 import { DirectoryBrowser } from '../src/client/DirectoryBrowser.tsx'
+import { localizedFolderName } from '../src/client/folder-names.ts'
 
 afterEach(cleanup)
 
@@ -85,6 +86,20 @@ function listingFor(path?: string): DirectoryListing {
   return found
 }
 
+/** English standard-folder labels; a key outside the map renders as itself. */
+const EN_FOLDERS: Record<string, string> = {
+  'folder.desktop': 'Desktop',
+  'folder.documents': 'Documents',
+  'folder.downloads': 'Downloads',
+  'folder.movies': 'Movies',
+  'folder.videos': 'Videos',
+  'folder.music': 'Music',
+  'folder.pictures': 'Pictures',
+  'folder.public': 'Public',
+  'folder.library': 'Library',
+  'folder.applications': 'Applications',
+}
+
 function mount(overrides: Partial<Parameters<typeof DirectoryBrowser>[0]> = {}) {
   const listDirectory = vi.fn(async (path?: string) => listingFor(path))
   const createDirectory = vi.fn(async (path: string, name: string) => `${path}/${name}`)
@@ -97,7 +112,10 @@ function mount(overrides: Partial<Parameters<typeof DirectoryBrowser>[0]> = {}) 
     onOpen,
     onClose,
     busy: false,
-    t: (key: string, params?: Record<string, unknown>) => (params === undefined ? key : `${key}:${String(params.name)}`),
+    // English dictionaries render the standard folders under their disk names,
+    // so the default seat maps them back and every other key stays readable.
+    t: (key: string, params?: Record<string, unknown>) => (EN_FOLDERS[key]
+      ?? (params === undefined ? key : `${key}:${String(params.name)}`)),
     ...overrides,
   }
   const view = render(<DirectoryBrowser {...props} />)
@@ -1756,5 +1774,82 @@ describe('DirectoryBrowser', () => {
     await waitFor(() => { expect(screen.getByRole('listitem').textContent).toBe('Documents') })
     expect(columns()).toHaveLength(1)
     expect(b.listDirectory).toHaveBeenLastCalledWith(undefined, expect.any(AbortSignal))
+  })
+})
+
+/** Standard-folder copy for one language; every other key stays readable as a key. */
+const ZH_FOLDERS: Record<string, string> = {
+  'browser.home': '主目录',
+  'folder.desktop': '桌面',
+  'folder.documents': '文稿',
+  'folder.downloads': '下载',
+}
+
+function zhTranslate(key: string, params?: Record<string, unknown>): string {
+  if (key === 'browser.createIn') return `在"${String(params?.name)}"中新建文件夹`
+  return ZH_FOLDERS[key] ?? key
+}
+
+function standardHomeListing(): DirectoryListing {
+  return {
+    path: HOME,
+    home: HOME,
+    crumbs: [
+      { name: '/', path: '/', hidden: false },
+      { name: 'home', path: '/home', hidden: false },
+      { name: 'u', path: HOME, hidden: false },
+    ],
+    entries: [
+      { name: 'Desktop', path: `${HOME}/Desktop`, hidden: false },
+      { name: 'Documents', path: DOCS, hidden: false },
+      { name: 'Downloads', path: `${HOME}/Downloads`, hidden: false },
+      { name: 'projects', path: `${HOME}/projects`, hidden: false },
+    ],
+    truncated: false,
+  }
+}
+
+function documentsLevel(): DirectoryListing {
+  return {
+    path: DOCS,
+    home: HOME,
+    crumbs: [
+      { name: '/', path: '/', hidden: false },
+      { name: 'home', path: '/home', hidden: false },
+      { name: 'u', path: HOME, hidden: false },
+      { name: 'Documents', path: DOCS, hidden: false },
+    ],
+    entries: [{ name: 'harness', path: HARNESS, hidden: false }],
+    truncated: false,
+  }
+}
+
+describe('localized standard folder labels', () => {
+  it('renders home-level standard folders in the active language, leaving other folders alone', async () => {
+    const listDirectory = vi.fn(async (path?: string) => (path === undefined ? standardHomeListing() : documentsLevel()))
+    mount({ listDirectory, t: zhTranslate })
+    await waitFor(() => { expect(screen.getAllByRole('listitem')).toHaveLength(4) })
+    expect(screen.getAllByRole('listitem').map(item => item.textContent))
+      .toEqual(['桌面', '文稿', '下载', 'projects'])
+  })
+
+  it('carries the localized label into the crumb and the nested create dialog', async () => {
+    const listDirectory = vi.fn(async (path?: string) => (path === undefined ? standardHomeListing() : documentsLevel()))
+    mount({ listDirectory, t: zhTranslate })
+    await waitFor(() => { expect(screen.getAllByRole('listitem')).toHaveLength(4) })
+    fireEvent.click(rowButton(screen.getAllByRole('listitem')[1]!))
+    await waitFor(() => { expect(columns()).toHaveLength(2) })
+    expect(within(screen.getByRole('navigation')).getByRole('button', { name: '文稿' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'browser.newFolder' }))
+    await screen.findByText('在"文稿"中新建文件夹')
+  })
+
+  it('localizes only home-level standard folders and matches the platform path rules', () => {
+    const entry = (name: string, path: string): DirectoryEntry => ({ name, path, hidden: false })
+    expect(localizedFolderName(entry('Documents', `${HOME}/Documents`), HOME, zhTranslate)).toBe('文稿')
+    expect(localizedFolderName(entry('Documents', `${HOME}/projects/Documents`), HOME, zhTranslate)).toBe('Documents')
+    expect(localizedFolderName(entry('Desktop', 'C:\\Users\\u\\Desktop'), 'C:\\Users\\u', zhTranslate)).toBe('桌面')
+    expect(localizedFolderName(entry('Desktop', 'C:\\Users\\u\\Desktop'), 'c:\\users\\U', zhTranslate)).toBe('桌面')
+    expect(localizedFolderName(entry('renamed', `${HOME}/renamed`), HOME, zhTranslate)).toBe('renamed')
   })
 })

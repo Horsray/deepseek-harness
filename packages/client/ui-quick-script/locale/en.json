@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Quick scripts",
+    "description": "A play menu beside the model selector that runs saved shell scripts in a fresh sidebar terminal."
+  }
+}

@@ -18,7 +18,11 @@
  * owning flow decides what "Open" means and owns the workspace-creation
  * error surface. Hidden entries are host-flagged and hidden by default; the
  * footer's fixed-label "Show hidden files" toggle (aria-pressed, check when
- * on) reveals them (client-side only). The path editor announces itself with
+ * on) reveals them (client-side only). Standard folders one level below home
+ * render under locale-owned display names (macOS keeps `Desktop`,
+ * `Documents`, and `Downloads` on disk); rows, crumbs, and the create
+ * dialog's target use that label while paths and create targets keep the
+ * filesystem spelling. The path editor announces itself with
  * a pencil glyph and a bar-wide hover-lit outline, opens seeded with a
  * trailing separator, and keeps the panes under the draft: the final segment
  * prefix-filters the LAST pane while that pane's level is the one the draft's
@@ -42,6 +46,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DirectoryEntry, DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
 import type { Translate } from '@deepseek-ai/dsh-client-locale/client'
+import { localizedFolderName } from './folder-names.ts'
 import css from './DirectoryBrowser.module.css'
 
 /** Owner-supplied browser props: browse calls, pick semantics, and copy. */
@@ -111,13 +116,27 @@ const DRAFT_PREVIEW_DEBOUNCE_MS = 250
 /**
  * Breadcrumb rows for display: inside the home subtree the chain starts at a
  * localized Home crumb; outside it the full ancestry shows, the root labeled
- * by its own path.
+ * by its own path. A standard folder one level below home keeps its localized
+ * name here too, so a crumb reads like the row it was reached from.
  */
-function displayCrumbs(listing: DirectoryListing, homeLabel: string): DirectoryEntry[] {
+function displayCrumbs(listing: DirectoryListing, homeLabel: string, t: Translate): DirectoryEntry[] {
   const homeIndex = listing.crumbs.findIndex(crumb => crumb.path === listing.home)
   if (homeIndex === -1) return listing.crumbs
   const tail = listing.crumbs.slice(homeIndex + 1)
+    .map(crumb => ({ ...crumb, name: localizedFolderName(crumb, listing.home, t) }))
   return [{ name: homeLabel, path: listing.home, hidden: false }, ...tail]
+}
+
+/**
+ * Arity of the displayed crumb chain, label-independent: inside the home
+ * subtree the Home anchor replaces the ancestry above it, so a two-pane
+ * landing is possible exactly when this depth exceeds one.
+ * @param listing - the level whose crumbs decide the landing shape.
+ * @returns the number of crumbs {@link displayCrumbs} yields for the listing.
+ */
+function displayCrumbDepth(listing: DirectoryListing): number {
+  const homeIndex = listing.crumbs.findIndex(crumb => crumb.path === listing.home)
+  return homeIndex === -1 ? listing.crumbs.length : listing.crumbs.length - homeIndex
 }
 
 /**
@@ -218,8 +237,10 @@ function visibleEntries(
 }
 
 /** One column of folder rows (the Miller view renders one or two of these). */
-function LevelColumn({ entries, selectedPath, busy, onPick, showHidden, filterPrefix, pathEditing }: {
+function LevelColumn({ entries, home, t, selectedPath, busy, onPick, showHidden, filterPrefix, pathEditing }: {
   entries: readonly DirectoryEntry[]
+  home: string
+  t: Translate
   selectedPath: string | null
   busy: boolean
   onPick: (entry: DirectoryEntry) => void
@@ -255,7 +276,7 @@ function LevelColumn({ entries, selectedPath, busy, onPick, showHidden, filterPr
               {selected
                 ? <IconFolderOpenRegular size={16} className={css.rowIconSelected} />
                 : <IconFolderCloseRegular size={16} className={css.rowIcon} />}
-              <span className={css.rowName}>{entry.name}</span>
+              <span className={css.rowName}>{localizedFolderName(entry, home, t)}</span>
               <IconChevronRightOutlineRegular size={12} className={css.rowChevron} />
             </button>
           </span>
@@ -443,7 +464,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
         settle()
       }
       // Arity is label-independent: only the collapsed chain's depth decides.
-      if (displayCrumbs(target, '').length < 2) { landSingle(); return }
+      if (displayCrumbDepth(target) < 2) { landSingle(); return }
       const parentCrumb = target.crumbs.at(-2)
       /* v8 ignore next -- narrowing: a two-deep display chain implies a parent crumb (root-to-target inclusive). */
       if (parentCrumb === undefined) { landSingle(); return }
@@ -601,8 +622,11 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
 
   /** The folder a create or Open acts on: the selection, else the listed level. */
   const targetPath = selected?.path ?? parent?.path ?? null
-  const targetName = selected?.name
-    ?? (parent === null ? '' : (displayCrumbs(parent, t('browser.home')).at(-1)?.name ?? parent.path))
+  // The create dialog names its target the way the rows do, so a selection at
+  // the home level reads as the localized standard folder, not the disk name.
+  const targetName = selected === null
+    ? (parent === null ? '' : (displayCrumbs(parent, t('browser.home'), t).at(-1)?.name ?? parent.path))
+    : (parent === null ? selected.name : localizedFolderName(selected, parent.home, t))
 
   const confirmCreate = (): void => {
     /* v8 ignore next -- reentry fence: the nested dialog only renders with a target and disables while creating. */
@@ -695,7 +719,7 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
   const typedPrefix = crumbSource === null || pathDraft === null
     ? null
     : readDraft(crumbSource, pathDraft, scanned.current).tail
-  const crumbs = crumbSource === null ? [] : displayCrumbs(crumbSource, t('browser.home'))
+  const crumbs = crumbSource === null ? [] : displayCrumbs(crumbSource, t('browser.home'), t)
   const crumbTail = crumbs.at(-1)?.path
   useEffect(() => {
     const trail = crumbTrailRef.current
@@ -928,6 +952,8 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
             {parent !== null && (
               <LevelColumn
                 entries={parent.entries}
+                home={parent.home}
+                t={t}
                 selectedPath={selected?.path ?? null}
                 busy={parentInert}
                 onPick={select}
@@ -940,6 +966,8 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
             {twoPane && child !== null && (
               <LevelColumn
                 entries={child.entries}
+                home={child.home}
+                t={t}
                 selectedPath={null}
                 busy={parentInert}
                 onPick={advance}

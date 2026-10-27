@@ -31,7 +31,7 @@ async function bench(declare = true) {
   return { ctx, slots, declareHoles, disposeHoles }
 }
 
-describe('official browser-brand plugin', () => {
+describe('company browser-brand plugin', () => {
   it('keeps the host Loader entry inert', () => {
     expect(hostApply).not.toThrow()
   })
@@ -40,15 +40,14 @@ describe('official browser-brand plugin', () => {
     expect(inject).toEqual(['slots'])
   })
 
-  it('leaves every slot empty outside the official build profile', async () => {
+  it('fills both brand slots in a local build', async () => {
     vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', 'local')
     const subject = await bench()
     await subject.ctx.plugin({ inject: [...inject], apply }).await()
-    for (const hole of HOLES) expect(subject.slots.entries(hole)).toHaveLength(0)
+    for (const hole of HOLES) expect(subject.slots.entries(hole)).toHaveLength(1)
   })
 
   it('fills declarations before or after apply and removes every occupant on teardown', async () => {
-    vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', 'official')
     const before = await bench()
     const fiber = before.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
@@ -71,21 +70,30 @@ describe('official browser-brand plugin', () => {
     for (const hole of HOLES) expect(after.slots.entries(hole)).toHaveLength(1)
   })
 
-  it('leaves the conversation hero on its declaring fallback even in official builds', async () => {
-    vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', 'official')
+  it('leaves the conversation hero on its declaring fallback', async () => {
     const subject = await bench()
     await subject.ctx.plugin({ inject: [...inject], apply }).await()
     expect(subject.slots.entries(HERO_HOLE)).toHaveLength(0)
   })
 
-  it('renders the official name independently from both requested mark sizes', () => {
-    const name = render(<OfficialBrandName />)
-    expect(name.container.querySelector('svg')?.getAttribute('viewBox')).toBe('26 0 156 24')
-    name.unmount()
+  it('renders the row wordmark and the rail sign at the requested edge', () => {
+    // The row scales the wide lockup down from the square slot edge.
+    const row = render(<OfficialBrandMark size={24} surface="row" />)
+    const rowImages = [...row.container.querySelectorAll('img')]
+    expect(rowImages).toHaveLength(2)
+    for (const image of rowImages) expect(image.style.height).toBe('18px')
+    const rowSource = rowImages[0]?.getAttribute('src')
+    row.unmount()
 
-    const mark = render(<OfficialBrandMark size={34} />)
-    expect(mark.container.querySelector('svg')?.getAttribute('width')).toBe('34')
-    mark.rerender(<OfficialBrandMark size={24} />)
-    expect(mark.container.querySelector('svg')?.getAttribute('width')).toBe('24')
+    const rail = render(<OfficialBrandMark size={34} surface="rail" />)
+    const railImages = [...rail.container.querySelectorAll('img')]
+    expect(railImages).toHaveLength(2)
+    for (const image of railImages) expect(image.style.height).toBe('34px')
+    expect(railImages[0]?.getAttribute('src')).not.toBe(rowSource)
+  })
+
+  it('leaves the name seat empty because the wordmark carries the name', () => {
+    const name = render(<OfficialBrandName />)
+    expect(name.container.innerHTML).toBe('')
   })
 })

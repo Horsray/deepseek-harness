@@ -15,6 +15,10 @@ import {
 import { notarizeMacOSDiskImageArtifact } from './notarize-macos-disk-images.mjs'
 import { verifyMacOSDiskImageSignature, verifyMacOSSignatureAfterSign } from './verify-macos-signature.mjs'
 import {
+  expectedMacOSBundleLocalizations,
+  verifyMacOSBundleLocalizations,
+} from './verify-macos-bundle-localization.mjs'
+import {
   createWindowsTokenSigner,
   installWindowsNsisBootstrapSigner,
   resolveWindowsUpdatePublisher,
@@ -34,6 +38,12 @@ import {
   verifyMacOSAppUpdateConfig,
   writeMacOSAppUpdateConfig,
 } from './macos-app-update-config.mjs'
+
+/**
+ * Localizations the macOS bundle declares; AppKit localizes standard-directory names only for listed locales.
+ * The shipped locale list is mirrored here because electron-builder loads this file under plain Node.
+ */
+const MACOS_BUNDLE_LOCALIZATIONS = expectedMacOSBundleLocalizations(['en', 'zh', 'ja', 'es', 'fr', 'de', 'ru', 'pt'])
 
 /**
  * Create electron-builder configuration from one release environment.
@@ -165,7 +175,7 @@ export function createElectronBuilderConfig(
       category: 'public.app-category.developer-tools',
       // macOS matches the application locale against this bundle, not Electron Framework resources.
       extendInfo: {
-        CFBundleLocalizations: ['en', 'zh_CN', 'ja', 'es', 'fr', 'de', 'ru', 'pt'],
+        CFBundleLocalizations: MACOS_BUNDLE_LOCALIZATIONS,
         NSMicrophoneUsageDescription: 'DeepSeek Harness uses your microphone to transcribe speech into message drafts.',
       },
       // Ad-hoc signing keeps the modified Electron executable runnable without a Developer ID.
@@ -201,6 +211,12 @@ export function createElectronBuilderConfig(
     afterPack: async context => {
       const { verifyDesktopRuntime } = await import('../lib/types/runtime-tree.js')
       const resourcesDir = context.packager.getResourcesDir(context.appOutDir)
+      // Configuration alone does not prove the packed Info.plist kept the declaration; a bundle that
+      // dropped it would otherwise reach signing and publication.
+      if (resolvedPlatform === 'darwin') {
+        await verifyMacOSBundleLocalizations(join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`),
+          MACOS_BUNDLE_LOCALIZATIONS)
+      }
       if (resolvedPlatform === 'darwin' && update !== undefined) {
         await writeMacOSAppUpdateConfig(resourcesDir, resolveMacOSAppUpdateFeed(context.packager.config.publish),
           context.packager.appInfo.updaterCacheDirName)

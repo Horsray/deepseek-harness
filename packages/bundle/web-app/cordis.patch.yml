@@ -453,9 +453,19 @@
     - id: ui-settings-web-search
       name: '@deepseek-ai/dsh-client-ui-settings-web-search'
 
+    # Attention reminders: an overlay toast, a synthesized chime, and a page
+    # icon count for pending interactions and unacknowledged completions.
+    - id: ui-attention
+      name: '@deepseek-ai/dsh-client-ui-attention'
+
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'
+
+    # Quick scripts: the play menu before the model selector, running saved
+    # shell scripts in a fresh right-sidebar terminal.
+    - id: ui-quick-script
+      name: '@deepseek-ai/dsh-client-ui-quick-script'
 
     - id: ui-user-questions
       name: '@deepseek-ai/dsh-client-ui-user-questions'

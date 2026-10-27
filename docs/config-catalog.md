@@ -881,6 +881,31 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-agent-team -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-agnes-media -->
+<a id="deepseek-aidsh-experimental-agnes-media"></a>
+
+## `@deepseek-ai/dsh-experimental-agnes-media`
+
+- `inject`: `tools` · `workingDirectory` · `attachments`
+- `source`: [`packages/experimental/agnes-media/src/index.ts:27`](../packages/experimental/agnes-media/src/index.ts)
+
+```ts config-catalog
+/** Deployment tuning and Agnes credential source. */
+export interface Config {
+  /** Agnes API key; when omitted, `AGNES_API_KEY` and {@link Config.apiKeyFile} are tried. */
+  apiKey?: string
+  /** File holding the API key on one line; defaults to `~/.dsh/agnes-api-key`. */
+  apiKeyFile?: string
+  /** API origin; the domestic site is the default, the international hub uses a different origin. */
+  baseUrl: string
+  /** Timeout for one image request or one complete asynchronous video task. */
+  requestTimeoutMs: number
+  /** Interval between asynchronous video task polls. */
+  pollIntervalMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-agnes-media -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-api-speech-to-text -->
 <a id="deepseek-aidsh-experimental-api-speech-to-text"></a>
 
@@ -4731,6 +4756,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-plan` | — | [`packages/client/ui-plan/src/index.ts`](../packages/client/ui-plan/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-plugin-market` | — | [`packages/client/ui-plugin-market/src/index.ts`](../packages/client/ui-plugin-market/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-plugin-recommendations` | — | [`packages/experimental/client-ui-plugin-recommendations/src/index.ts`](../packages/experimental/client-ui-plugin-recommendations/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-quick-script` | — | [`packages/client/ui-quick-script/src/index.ts`](../packages/client/ui-quick-script/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-reference` | — | [`packages/client/ui-reference/src/index.ts`](../packages/client/ui-reference/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-renderer` | — | [`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-schedule` | — | [`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts) |

@@ -249,12 +249,20 @@
   min-width: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
-  padding: 0;
+  /* The expanded row seats the collapse toggle after the brand; this start
+     inset recentres brand content on the row instead of on the remaining box. */
+  padding: 0 0 0 36px;
   border: none;
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+/* macOS desktop keeps the toggle in the top strip, so the row has no trailing control. */
+:global([data-platform='darwin']) .brand {
+  padding-left: 0;
 }
 
 /* On macOS the brand is a window-drag surface, not a New Session button;
@@ -290,6 +298,11 @@
   font-weight: 600;
   line-height: 24px;
   letter-spacing: 0.04em;
+}
+
+/* An occupant may own the whole brand width; the empty seat must not add its gap. */
+.brandName:empty {
+  display: none;
 }
 
 .fallbackBrandName {
